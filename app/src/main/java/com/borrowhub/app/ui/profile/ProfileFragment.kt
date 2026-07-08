@@ -18,6 +18,10 @@ import com.borrowhub.app.ui.auth.LoginActivity
 import com.bumptech.glide.Glide
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Fragment Profile digunakan untuk mengelola akun pengguna dan pengaturan notifikasi.
+ * Di sini kita menggunakan SharedPreferences untuk menyimpan preferensi lokal secara persisten.
+ */
 class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
@@ -35,20 +39,21 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Merender gambar estetika ke dalam Avatar Profil menggunakan Glide
+        // Memuat avatar profil menggunakan Glide.
         Glide.with(this)
             .load("https://images.unsplash.com/photo-1578306789121-6571b7b4d1b8?q=80&w=200&auto=format&fit=crop")
+            .circleCrop()
             .into(binding.ivAvatar)
 
-        // Tombol Edit Profile untuk Simulasi Test Notifikasi
+        // Fitur Test Notifikasi untuk mendemonstrasikan kapabilitas push notification aplikasi.
         binding.btnEditProfile.setOnClickListener {
-            // Fungsi notifikasi tetap sama, hanya memanggilnya dari tombol baru
             triggerTestNotification()
         }
 
-        // Pengaturan Preferensi
+        // Inisialisasi SharedPreferences untuk menyimpan konfigurasi reminder.
         sharedPrefs = requireContext().getSharedPreferences("BorrowHubPrefs", Context.MODE_PRIVATE)
 
+        // Sinkronisasi status switch dengan data yang tersimpan di memori internal.
         binding.switchH1.isChecked = sharedPrefs.getBoolean("PREF_H1_REMINDER", true)
         binding.switchHariH.isChecked = sharedPrefs.getBoolean("PREF_HARI_H_REMINDER", true)
 
@@ -60,43 +65,46 @@ class ProfileFragment : Fragment() {
             sharedPrefs.edit().putBoolean("PREF_HARI_H_REMINDER", isChecked).apply()
         }
 
+        // Proses Logout: Menghapus sesi Firebase dan mengarahkan kembali ke halaman Login.
         binding.btnLogout.setOnClickListener {
-            // End the Firebase session
             FirebaseAuth.getInstance().signOut()
 
             val intent = Intent(requireContext(), LoginActivity::class.java)
+            // Menghapus tumpukan activity agar pengguna tidak bisa kembali ke profil setelah logout.
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
         }
     }
 
-    // Fungsi Pembantu untuk Menembakkan Notifikasi Uji Coba
+    /**
+     * Mengirimkan notifikasi lokal untuk keperluan testing.
+     * Penting: Sejak Android Oreo (API 26), pembuatan Notification Channel adalah syarat wajib
+     * agar notifikasi bisa muncul di layar pengguna.
+     */
     private fun triggerTestNotification() {
         val channelId = "borrowhub_test_channel"
         val notificationManager = requireContext().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Membuat Channel khusus (Wajib untuk Android versi Oreo ke atas)
+        // Membuat Channel khusus untuk Android versi Oreo ke atas.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Uji Coba Sistem",
+                "System Test",
                 NotificationManager.IMPORTANCE_HIGH
             )
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Merakit tampilan notifikasi
         val builder = NotificationCompat.Builder(requireContext(), channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Test Notifikasi BorrowHub")
-            .setContentText("Halo! Sistem notifikasi profil Anda berjalan dengan sangat baik.")
+            .setContentTitle("BorrowHub Test Notification")
+            .setContentText("Success! Your notification system is working perfectly.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true) // Notifikasi otomatis hilang saat digeser/diklik
+            .setAutoCancel(true)
 
-        // Menembakkan notifikasi dengan ID unik (contoh: 999)
         notificationManager.notify(999, builder.build())
 
-        Toast.makeText(requireContext(), "Notifikasi dikirim! Cek bar atas HP Anda.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Test notification sent! Check your device.", Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroyView() {

@@ -15,6 +15,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Fragment Transactions menampilkan daftar riwayat peminjaman yang sudah selesai (Completed).
+ */
 class TransactionsFragment : Fragment() {
 
     private var _binding: FragmentTransactionsBinding? = null
@@ -40,11 +43,11 @@ class TransactionsFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        // Menggunakan ulang ActiveLoanAdapter
+        // Kita menggunakan kembali ActiveLoanAdapter untuk konsistensi UI.
         historyAdapter = ActiveLoanAdapter(
             loanList = historyList,
             onViewDetailsClick = { loan -> showLoanDetails(loan) },
-            onProcessReturnClick = { /* Tombol ini sudah disembunyikan untuk status Completed */ }
+            onProcessReturnClick = { /* Tombol pengembalian disembunyikan otomatis untuk status Completed */ }
         )
 
         binding.rvTransactions.apply {
@@ -53,8 +56,11 @@ class TransactionsFragment : Fragment() {
         }
     }
 
+    /**
+     * Mengambil data transaksi yang statusnya 'Completed'.
+     * Tujuannya agar pengguna bisa melihat riwayat barang apa saja yang pernah dipinjam sebelumnya.
+     */
     private fun fetchTransactionHistory() {
-        // KUNCI: Hanya mengambil data yang statusnya "Completed"
         db.collection("borrows")
             .whereEqualTo("status", "Completed")
             .get()
@@ -68,19 +74,22 @@ class TransactionsFragment : Fragment() {
                 historyAdapter.notifyDataSetChanged()
             }
             .addOnFailureListener { exception ->
-                Log.e("TransactionsFragment", "Gagal memuat riwayat", exception)
+                Log.e("TransactionsFragment", "Failed to fetch transaction history", exception)
             }
     }
 
+    /**
+     * Menampilkan detail riwayat transaksi.
+     */
     private fun showLoanDetails(loan: Borrow) {
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
         val startDate = loan.startDate?.toDate()?.let { sdf.format(it) } ?: "-"
         val endDate = loan.endDate?.toDate()?.let { sdf.format(it) } ?: "-"
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Detail Riwayat")
-            .setMessage("Barang: ${loan.itemName}\nPeminjam: ${loan.borrowerName}\nStatus: ${loan.status}\n\nTanggal Pinjam: $startDate\nTenggat Waktu: $endDate")
-            .setPositiveButton("Tutup", null)
+            .setTitle("Transaction History Detail")
+            .setMessage("Item: ${loan.itemName}\nBorrower: ${loan.borrowerName}\nStatus: ${loan.status}\n\nBorrowed Date: $startDate\nReturned Date: $endDate")
+            .setPositiveButton("Close", null)
             .show()
     }
 

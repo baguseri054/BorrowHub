@@ -8,55 +8,50 @@ import com.borrowhub.app.MainActivity
 import com.borrowhub.app.databinding.ActivityLoginBinding
 import com.google.firebase.auth.FirebaseAuth
 
+/**
+ * Activity ini menangani proses autentikasi pengguna (Login dan Reset Password).
+ * Menggunakan Firebase Authentication sebagai layanan backend untuk verifikasi kredensial.
+ */
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private lateinit var auth: FirebaseAuth
 
-    /**
-     * Fungsi yang dipanggil pas activity pertama kali dibuat.
-     * 
-     * Langkah-langkahnya:
-     * 1. Setup view binding buat akses UI.
-     * 2. Inisialisasi Firebase Auth biar bisa login.
-     * 3. Cek kalo user udah login, langsung lempar ke home.
-     * 4. Pasang klik listener buat tombol login sama reset password.
-     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Menggunakan View Binding untuk akses elemen UI yang lebih aman dan ringkas
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Siapin Firebase Auth-nya
+        // Inisialisasi instance Firebase Auth untuk mengelola sesi pengguna
         auth = FirebaseAuth.getInstance()
 
-        // Kalo emang udah login, gas langsung ke MainActivity
+        // Cek sesi: Jika pengguna sudah login sebelumnya, langsung arahkan ke Dashboard Utama
         if (auth.currentUser != null) {
             navigateToMain()
         }
 
-        // Kalo tombol login diklik
+        // Listener untuk tombol Login
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
 
-            // Pastiin email sama password nggak kosong
+            // Validasi input dasar: memastikan kolom tidak kosong sebelum memproses ke Firebase
             if (email.isNotEmpty() && password.isNotEmpty()) {
                 loginUser(email, password)
             } else {
-                // Kasih tau user kalo ada yang kosong
-                Toast.makeText(this, "Hey, don't leave your email and password empty!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please enter your email and password.", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Kalo tombol lupa password diklik
+        // Listener untuk fitur Lupa Password
         binding.btnForgotPassword.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
 
-            // Validasi: pastiin email diisi dulu sebelum minta reset
+            // Validasi: Pengguna harus memasukkan email terlebih dahulu sebelum meminta reset link
             if (email.isEmpty()) {
-                binding.etEmail.error = "Put your email here first, buddy!"
-                binding.etEmail.requestFocus() // Fokusin kursor ke input email
+                binding.etEmail.error = "Please enter your email address first."
+                binding.etEmail.requestFocus()
                 return@setOnClickListener
             }
 
@@ -65,57 +60,47 @@ class LoginActivity : AppCompatActivity() {
     }
 
     /**
-     * Fungsi buat proses login user pake Firebase.
-     * 
-     * Langkah-langkahnya:
-     * 1. Panggil fungsi Firebase buat sign in pake email & password.
-     * 2. Kalo sukses, pindah ke MainActivity.
-     * 3. Kalo gagal, tampilin pesan error-nya.
+     * Fungsi ini memproses autentikasi ke Firebase menggunakan email dan password.
+     * Tujuannya agar kita bisa memvalidasi apakah pengguna terdaftar secara resmi di database.
      */
     private fun loginUser(email: String, pass: String) {
         auth.signInWithEmailAndPassword(email, pass)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
+                    // Login berhasil, arahkan ke halaman utama
                     navigateToMain()
                 } else {
-                    // Kasih tau kalo login-nya gagal
-                    Toast.makeText(this, "Oops, login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                    // Login gagal, tampilkan pesan error dari Firebase (misalnya: salah password atau user tidak ditemukan)
+                    Toast.makeText(this, "Login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
     /**
-     * Fungsi buat ngirim email reset password.
-     * 
-     * Langkah-langkahnya:
-     * 1. Panggil Firebase buat kirim email reset password.
-     * 2. Kalo sukses, kasih tau user link-nya udah dikirim.
-     * 3. Kalo gagal, tampilin error-nya kenapa.
+     * Fungsi ini mengirimkan email pemulihan kata sandi melalui Firebase.
+     * Metodenya adalah memicu server Firebase untuk mengirimkan link unik ke email pengguna.
      */
     private fun resetPassword(email: String) {
         auth.sendPasswordResetEmail(email)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    // Berhasil kirim email reset
-                    Toast.makeText(this, "Sent! Check your email at $email for the reset link.", Toast.LENGTH_LONG).show()
+                    // Berhasil memicu pengiriman email
+                    Toast.makeText(this, "Reset link sent! Please check your email inbox.", Toast.LENGTH_LONG).show()
                 } else {
-                    // Gagal kirim email reset
-                    Toast.makeText(this, "My bad, couldn't send the email: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                    // Gagal mengirim email, biasanya karena email tidak terdaftar
+                    Toast.makeText(this, "Failed to send reset email: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
     /**
-     * Fungsi buat pindah halaman ke MainActivity.
-     * 
-     * Langkah-langkahnya:
-     * 1. Buat intent buat buka MainActivity.
-     * 2. Jalanin intent-nya.
-     * 3. Tutup activity login biar nggak bisa balik lagi kalo dipencet back.
+     * Fungsi navigasi untuk berpindah ke MainActivity.
+     * Kita menggunakan finish() agar Activity login dihapus dari backstack, 
+     * sehingga pengguna tidak bisa kembali ke halaman login dengan menekan tombol Back setelah masuk.
      */
     private fun navigateToMain() {
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
-        finish() // Matiin activity ini
+        finish()
     }
 }

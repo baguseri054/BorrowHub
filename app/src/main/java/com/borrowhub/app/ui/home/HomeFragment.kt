@@ -22,6 +22,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Fragment Home merupakan Dashboard utama aplikasi.
+ * Berfungsi untuk menampilkan daftar barang yang sedang dipinjam (Active/Overdue)
+ * serta menyediakan fitur pencarian dan proses pengembalian barang.
+ */
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
@@ -29,18 +34,13 @@ class HomeFragment : Fragment() {
 
     private val db = FirebaseFirestore.getInstance()
 
+    // originalLoanList menyimpan data asli dari Firestore untuk keperluan filter/search
     private val originalLoanList = mutableListOf<Borrow>()
+    // loanList adalah data yang ditampilkan di RecyclerView (hasil filter)
     private val loanList = mutableListOf<Borrow>()
 
     private lateinit var loanAdapter: ActiveLoanAdapter
 
-    /**
-     * Fungsi buat bikin tampilan fragment.
-     * 
-     * Langkah-langkahnya:
-     * 1. Inflate layout fragment home pake view binding.
-     * 2. Balikin root view-nya biar ditampilin.
-     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -49,15 +49,6 @@ class HomeFragment : Fragment() {
         return binding.root
     }
 
-    /**
-     * Fungsi yang dipanggil pas view-nya udah jadi.
-     * 
-     * Langkah-langkahnya:
-     * 1. Setup recycler view buat daftar barang yang dipinjem.
-     * 2. Ambil data pinjaman yang aktif dari Firestore.
-     * 3. Aktifin fitur search.
-     * 4. Pasang klik listener buat tombol nambah pinjaman baru.
-     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -71,14 +62,6 @@ class HomeFragment : Fragment() {
         }
     }
 
-    /**
-     * Fungsi buat nyiapin daftar (RecyclerView).
-     * 
-     * Langkah-langkahnya:
-     * 1. Inisialisasi adapter buat daftar pinjaman.
-     * 2. Kasih tau apa yang harus dilakuin pas tombol detail atau balik dipencet.
-     * 3. Set layout manager sama adapter ke RecyclerView.
-     */
     private fun setupRecyclerView() {
         loanAdapter = ActiveLoanAdapter(
             loanList = loanList,
@@ -93,11 +76,8 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * Fungsi buat nyiapin fitur pencarian.
-     * 
-     * Langkah-langkahnya:
-     * 1. Pasang text watcher biar pencarian jalan otomatis pas ngetik.
-     * 2. Pasang editor action biar keyboard sembunyi pas teken tombol cari.
+     * Menyiapkan fitur pencarian real-time.
+     * Menggunakan TextWatcher untuk mendeteksi setiap perubahan karakter di kolom search.
      */
     private fun setupSearch() {
         binding.etSearchLoan.addTextChangedListener(object : TextWatcher {
@@ -110,6 +90,7 @@ class HomeFragment : Fragment() {
             }
         })
 
+        // Menutup keyboard secara otomatis saat tombol 'Search' di keyboard ditekan
         binding.etSearchLoan.setOnEditorActionListener { v, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -123,13 +104,8 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * Fungsi buat nyaring data pinjaman sesuai yang diketik user.
-     * 
-     * Langkah-langkahnya:
-     * 1. Kosongin list tampilan sekarang.
-     * 2. Kalo query kosong, tampilin semua data asli.
-     * 3. Kalo ada isinya, cari data yang nama barang atau peminjamnya cocok.
-     * 4. Update tampilan daftarnya.
+     * Logika Filter: Menyaring daftar pinjaman berdasarkan Nama Barang atau Nama Peminjam.
+     * Tujuannya memudahkan staf mencari data spesifik tanpa harus scroll manual.
      */
     private fun filterLoans(query: String) {
         loanList.clear()
@@ -149,13 +125,7 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * Fungsi buat nunjukin detail pinjaman lewat pop-up.
-     * 
-     * Langkah-langkahnya:
-     * 1. Format tanggal biar enak dibaca.
-     * 2. Bikin layout pop-up secara manual.
-     * 3. Isi teks detail barang sama fotonya kalo ada.
-     * 4. Tampilin pop-up-nya pake AlertDialog.
+     * Menampilkan detail lengkap pinjaman termasuk foto kondisi barang saat dipinjam (Photo Before).
      */
     private fun showLoanDetails(loan: Borrow) {
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -197,40 +167,31 @@ class HomeFragment : Fragment() {
     }
 
     /**
-     * Fungsi buat proses pengembalian barang.
-     * 
-     * Langkah-langkahnya:
-     * 1. Munculin konfirmasi apakah beneran mau dikembaliin.
-     * 2. Kalo user yakin, update status di Firestore jadi 'Completed'.
-     * 3. Kasih tau hasilnya sukses atau gagal lewat Toast.
-     * 4. Refresh daftar pinjaman kalo sukses.
+     * Fungsi untuk memproses pengembalian barang.
+     * Mengubah status transaksi di Firestore menjadi 'Completed'. 
+     * Setelah status berubah, barang tersebut otomatis akan muncul kembali sebagai 'Available' di Katalog.
      */
     private fun processReturn(loan: Borrow) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Ready to return?")
-            .setMessage("Should we mark '${loan.itemName}' as returned?")
-            .setPositiveButton("Yup, done!", { _, _ ->
+            .setTitle("Process Return")
+            .setMessage("Are you sure you want to mark '${loan.itemName}' as returned?")
+            .setPositiveButton("Confirm") { _, _ ->
                 db.collection("borrows").document(loan.id)
                     .update("status", "Completed")
                     .addOnSuccessListener {
-                        Toast.makeText(requireContext(), "Awesome, item returned!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Item returned successfully!", Toast.LENGTH_SHORT).show()
                         fetchActiveLoans()
                     }
                     .addOnFailureListener { e ->
-                        Toast.makeText(requireContext(), "Ouch, failed to process: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Failed to process return: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
-            })
-            .setNegativeButton("Not yet", null)
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
     /**
-     * Fungsi buat ambil data pinjaman dari Firestore.
-     * 
-     * Langkah-langkahnya:
-     * 1. Kueri koleksi 'borrows' nyari yang statusnya Active atau Overdue.
-     * 2. Kalo dapet datanya, masukin ke list.
-     * 3. Update adapter biar datanya muncul di layar.
+     * Mengambil data pinjaman yang belum selesai (Active/Overdue) dari Firestore.
      */
     private fun fetchActiveLoans() {
         db.collection("borrows")
@@ -250,13 +211,10 @@ class HomeFragment : Fragment() {
                 loanAdapter.notifyDataSetChanged()
             }
             .addOnFailureListener { exception ->
-                Log.e("HomeFragment", "Man, failed to load loans", exception)
+                Log.e("HomeFragment", "Error loading active loans", exception)
             }
     }
 
-    /**
-     * Fungsi buat ngebersihin view binding pas fragment ancur.
-     */
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

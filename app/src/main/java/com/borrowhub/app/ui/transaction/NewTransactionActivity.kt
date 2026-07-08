@@ -12,6 +12,10 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * Activity ini menangani pembuatan transaksi peminjaman baru.
+ * Di sini terdapat logika filter barang agar pengguna hanya bisa memilih barang yang sedang tidak dipinjam.
+ */
 class NewTransactionActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityNewTransactionBinding
@@ -19,16 +23,6 @@ class NewTransactionActivity : AppCompatActivity() {
     private val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.US)
     private val db = FirebaseFirestore.getInstance()
 
-    /**
-     * Fungsi pas activity ini dibuat.
-     * 
-     * Langkah-langkahnya:
-     * 1. Setup view binding.
-     * 2. Pasang listener tombol balik.
-     * 3. Setup pemilih tanggal buat mulai & selesai pinjam.
-     * 4. Ambil barang-barang yang bisa dipinjem.
-     * 5. Pasang listener buat tombol submit.
-     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityNewTransactionBinding.inflate(layoutInflater)
@@ -45,14 +39,11 @@ class NewTransactionActivity : AppCompatActivity() {
     }
 
     /**
-     * Fungsi buat ambil barang yang lagi nggak dipinjem.
-     * 
-     * Langkah-langkahnya:
-     * 1. Kunci dropdown-nya biar nggak error pas loading.
-     * 2. Ambil semua list barang dari Firestore.
-     * 3. Ambil data pinjaman yang statusnya masih aktif.
-     * 4. Saring barang mana aja yang beneran free.
-     * 5. Masukin hasil saringannya ke dropdown menu.
+     * Logika Filter Barang Tersedia:
+     * 1. Mengambil semua data barang dari koleksi 'items'.
+     * 2. Mengambil data transaksi 'Active'/'Overdue' dari koleksi 'borrows'.
+     * 3. Menyaring barang yang tidak ada dalam daftar pinjaman aktif.
+     * Tujuannya untuk mencegah peminjaman ganda pada barang yang sama.
      */
     private fun loadAvailableItems() {
         binding.etSelectedItem.isEnabled = false
@@ -76,6 +67,7 @@ class NewTransactionActivity : AppCompatActivity() {
                         borrowedItems.add(name)
                     }
 
+                    // Hanya menampilkan barang yang tidak sedang dipinjam
                     val availableItems = allItems.filter { !borrowedItems.contains(it) }
 
                     val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, availableItems)
@@ -85,25 +77,20 @@ class NewTransactionActivity : AppCompatActivity() {
                     binding.etSelectedItem.hint = "Pick an item"
 
                     if (availableItems.isEmpty()) {
-                        Toast.makeText(this, "Bummer, everything's out!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "No items available for borrowing right now.", Toast.LENGTH_LONG).show()
                         binding.etSelectedItem.hint = "Empty catalog"
                     }
                 }
                 .addOnFailureListener {
-                    Toast.makeText(this, "Oops, couldn't load loan status", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Failed to check item availability.", Toast.LENGTH_SHORT).show()
                 }
         }.addOnFailureListener {
-            Toast.makeText(this, "My bad, couldn't load the catalog", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Failed to load catalog.", Toast.LENGTH_SHORT).show()
         }
     }
 
     /**
-     * Fungsi buat nampilin kalender pas input tanggal diklik.
-     * 
-     * Langkah-langkahnya:
-     * 1. Pasang klik listener di input tanggal mulai & selesai.
-     * 2. Munculin DatePickerDialog pas diklik.
-     * 3. Update teks input-nya sesuai tanggal yang dipilih.
+     * Inisialisasi DatePickerDialog untuk mempermudah pemilihan tanggal pinjam dan kembali.
      */
     private fun setupDatePickers() {
         binding.etStartDate.setOnClickListener {
@@ -134,15 +121,8 @@ class NewTransactionActivity : AppCompatActivity() {
     }
 
     /**
-     * Fungsi buat nyimpen transaksi pinjaman baru ke Firestore.
-     * 
-     * Langkah-langkahnya:
-     * 1. Ambil semua input dari layar.
-     * 2. Pastiin semuanya diisi (kecuali foto opsional).
-     * 3. Ubah teks tanggal jadi format Timestamp Firestore.
-     * 4. Bungkus datanya jadi HashMap.
-     * 5. Kirim datanya ke Firestore koleksi 'borrows'.
-     * 6. Tutup halaman kalo sukses, atau kasih tau error-nya.
+     * Mengirim data transaksi baru ke Firestore.
+     * Kita menggunakan Timestamp agar data tanggal tersimpan secara standar di Firebase.
      */
     private fun saveTransaction() {
         val itemName = binding.etSelectedItem.text.toString().trim()
@@ -152,12 +132,12 @@ class NewTransactionActivity : AppCompatActivity() {
         val endDateStr = binding.etEndDate.text.toString().trim()
 
         if (itemName.isEmpty() || borrowerName.isEmpty() || startDateStr.isEmpty() || endDateStr.isEmpty()) {
-            Toast.makeText(this, "Hey, fill everything in please!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please fill in all required fields.", Toast.LENGTH_SHORT).show()
             return
         }
 
         binding.btnSubmitTransaction.isEnabled = false
-        binding.btnSubmitTransaction.text = "Saving it for ya..."
+        binding.btnSubmitTransaction.text = "Saving..."
 
         try {
             val startDate = dateFormat.parse(startDateStr)
@@ -179,16 +159,16 @@ class NewTransactionActivity : AppCompatActivity() {
             db.collection("borrows")
                 .add(newBorrow)
                 .addOnSuccessListener {
-                    Toast.makeText(this, "Sweet, it's saved!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Transaction saved successfully!", Toast.LENGTH_SHORT).show()
                     finish()
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(this, "Darn, couldn't save: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Failed to save transaction: ${e.message}", Toast.LENGTH_SHORT).show()
                     binding.btnSubmitTransaction.isEnabled = true
                     binding.btnSubmitTransaction.text = "Submit Transaction"
                 }
         } catch (e: Exception) {
-            Toast.makeText(this, "Date format is wonky!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Invalid date format.", Toast.LENGTH_SHORT).show()
             binding.btnSubmitTransaction.isEnabled = true
             binding.btnSubmitTransaction.text = "Submit Transaction"
         }
