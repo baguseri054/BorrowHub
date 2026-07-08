@@ -19,6 +19,7 @@
         android:background="@color/white"
         app:itemIconTint="#0056C6"
         app:itemTextColor="#0056C6"
+        app:itemActiveIndicatorStyle="@style/CustomIndicator"
         app:menu="@menu/bottom_nav_menu" />
 
 </RelativeLayout>

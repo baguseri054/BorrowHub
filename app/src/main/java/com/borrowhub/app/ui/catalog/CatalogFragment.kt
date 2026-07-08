@@ -24,6 +24,9 @@ class CatalogFragment : Fragment() {
     private val itemList = mutableListOf<Items>()
     private lateinit var catalogAdapter: CatalogAdapter
 
+    /**
+     * Fungsi buat bikin tampilan fragment katalog.
+     */
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -32,6 +35,14 @@ class CatalogFragment : Fragment() {
         return binding.root
     }
 
+    /**
+     * Fungsi yang jalan pas view udah siap.
+     * 
+     * Langkah-langkahnya:
+     * 1. Setup recycler view buat nampilin katalog barang.
+     * 2. Ambil data katalog dari Firestore.
+     * 3. Pasang listener di tombol tambah barang.
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -44,10 +55,18 @@ class CatalogFragment : Fragment() {
         }
     }
 
+    /**
+     * Fungsi buat nyiapin daftar katalog (RecyclerView).
+     * 
+     * Langkah-langkahnya:
+     * 1. Inisialisasi adapter buat katalog.
+     * 2. Atur apa yang terjadi pas barang diklik atau diklik lama (hapus).
+     * 3. Set layout jadi grid (2 kolom) dan pasang adapternya.
+     */
     private fun setupRecyclerView() {
         catalogAdapter = CatalogAdapter(
             itemList = itemList,
-            onItemClick = { item -> showItemDetails(item) }, // Mengaktifkan klik biasa
+            onItemClick = { item -> showItemDetails(item) },
             onItemLongClick = { itemToDelete -> showDeleteDialog(itemToDelete) }
         )
         binding.rvCatalog.apply {
@@ -56,15 +75,23 @@ class CatalogFragment : Fragment() {
         }
     }
 
-    // Fungsi Baru: Menampilkan detail barang beserta fotonya
+    /**
+     * Fungsi buat nampilin detail barang di pop-up.
+     * 
+     * Langkah-langkahnya:
+     * 1. Bikin layout pop-up secara manual.
+     * 2. Isi teks detail barang (nama, status, deskripsi).
+     * 3. Tampilin foto barang kalo ada.
+     * 4. Munculin AlertDialog dengan tombol Tutup sama Edit.
+     */
     private fun showItemDetails(item: Items) {
         val layout = android.widget.LinearLayout(requireContext())
         layout.orientation = android.widget.LinearLayout.VERTICAL
         layout.setPadding(60, 40, 60, 0)
 
         val textDetails = android.widget.TextView(requireContext())
-        val statusText = if (item.isAvailable) "Tersedia" else "Sedang Dipinjam"
-        textDetails.text = "Nama Barang: ${item.name}\nStatus: $statusText\nDeskripsi: ${item.description}\n\nFoto Barang:"
+        val statusText = if (item.isAvailable) "Available" else "Borrowed"
+        textDetails.text = "Item Name: ${item.name}\nStatus: $statusText\nDescription: ${item.description}\n\nItem Photo:"
         textDetails.setTextColor(android.graphics.Color.BLACK)
         layout.addView(textDetails)
 
@@ -86,13 +113,11 @@ class CatalogFragment : Fragment() {
             layout.addView(imageView)
         }
 
-// Memasukkan layout tadi ke dalam AlertDialog dan menambahkan tombol Edit
         android.app.AlertDialog.Builder(requireContext())
-            .setTitle("Detail Katalog")
+            .setTitle("Catalog Detail")
             .setView(layout)
-            .setPositiveButton("Tutup", null)
+            .setPositiveButton("Close", null)
             .setNeutralButton("Edit") { _, _ ->
-                // Melempar data lama ke AddItemActivity menggunakan Intent
                 val intent = Intent(requireContext(), AddItemActivity::class.java).apply {
                     putExtra("EXTRA_ID", item.id)
                     putExtra("EXTRA_NAME", item.name)
@@ -104,31 +129,50 @@ class CatalogFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Fungsi buat nunjukin dialog konfirmasi hapus barang.
+     */
     private fun showDeleteDialog(item: Items) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Hapus Barang")
-            .setMessage("Apakah Anda yakin ingin menghapus '${item.name}' dari katalog?")
-            .setPositiveButton("Hapus") { _, _ ->
+            .setTitle("Delete Item")
+            .setMessage("You sure you wanna delete '${item.name}' from the catalog?")
+            .setPositiveButton("Delete") { _, _ ->
                 deleteItemFromFirestore(item)
             }
-            .setNegativeButton("Batal", null) // Tutup dialog jika batal
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
+    /**
+     * Fungsi buat hapus barang dari Firestore.
+     * 
+     * Langkah-langkahnya:
+     * 1. Hapus dokumen barang di koleksi 'items'.
+     * 2. Kalo sukses, kasih tau user dan refresh data katalog.
+     * 3. Kalo gagal, kasih tau error-nya.
+     */
     private fun deleteItemFromFirestore(item: Items) {
         db.collection("items").document(item.id)
             .delete()
             .addOnSuccessListener {
-                Toast.makeText(requireContext(), "Barang berhasil dihapus", Toast.LENGTH_SHORT).show()
-                fetchCatalogData() // Panggil ulang data untuk menyegarkan tampilan RecyclerView
+                Toast.makeText(requireContext(), "Boom, item deleted!", Toast.LENGTH_SHORT).show()
+                fetchCatalogData()
             }
             .addOnFailureListener { e ->
-                Toast.makeText(requireContext(), "Gagal menghapus: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Snap, couldn't delete: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 
+    /**
+     * Fungsi buat ambil data katalog dan ngecek ketersediaan barang.
+     * 
+     * Langkah-langkahnya:
+     * 1. Ambil semua list barang dari Firestore.
+     * 2. Ambil data pinjaman yang lagi aktif.
+     * 3. Bandingin: kalo barang ada di daftar pinjaman aktif, set statusnya jadi 'Borrowed'.
+     * 4. Update tampilan katalog.
+     */
     private fun fetchCatalogData() {
-        // 1. Ambil semua data barang dari Firestore
         db.collection("items").get().addOnSuccessListener { itemResult ->
             val tempItems = mutableListOf<Items>()
             for (document in itemResult) {
@@ -137,22 +181,18 @@ class CatalogFragment : Fragment() {
                 tempItems.add(item)
             }
 
-            // 2. Ambil data peminjaman yang berstatus "Active" atau "Overdue"
             db.collection("borrows")
                 .whereIn("status", listOf("Active", "Overdue"))
                 .get()
                 .addOnSuccessListener { borrowResult ->
-                    // Kumpulkan semua nama barang yang sedang dipinjam
                     val activeBorrowedItemNames = mutableListOf<String>()
                     for (doc in borrowResult) {
                         val borrow = doc.toObject(Borrow::class.java)
                         activeBorrowedItemNames.add(borrow.itemName)
                     }
 
-                    // 3. Cocokkan data. Jika barang sedang dipinjam, ubah statusnya menjadi Borrowed
                     itemList.clear()
                     for (item in tempItems) {
-                        // Salin objek item dan paksa isAvailable menjadi false jika namanya ada di daftar pinjaman aktif
                         val isCurrentlyBorrowed = activeBorrowedItemNames.contains(item.name)
                         val updatedItem = item.copy(isAvailable = !isCurrentlyBorrowed)
 
@@ -162,14 +202,17 @@ class CatalogFragment : Fragment() {
                     catalogAdapter.notifyDataSetChanged()
                 }
                 .addOnFailureListener { e ->
-                    Log.e("CatalogFragment", "Gagal memuat pinjaman silang", e)
+                    Log.e("CatalogFragment", "Ugh, failed to load cross-loans", e)
                 }
         }
             .addOnFailureListener { e ->
-                Log.e("CatalogFragment", "Gagal mengambil katalog", e)
+                Log.e("CatalogFragment", "Man, failed to grab the catalog", e)
             }
     }
 
+    /**
+     * Fungsi buat beresin view binding.
+     */
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

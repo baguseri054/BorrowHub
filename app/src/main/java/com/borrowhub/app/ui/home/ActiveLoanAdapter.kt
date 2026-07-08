@@ -28,12 +28,9 @@ class ActiveLoanAdapter(
         binding.tvLoanItemName.text = loan.itemName
         binding.tvBorrowerName.text = "Borrowed by: ${loan.borrowerName}"
 
-        binding.tvDueDate.text = loan.status
-        if (loan.status.equals("Overdue", ignoreCase = true)) {
-            binding.tvDueDate.setTextColor(Color.parseColor("#D32F2F")) // Merah
-        } else {
-            binding.tvDueDate.setTextColor(Color.parseColor("#B38F00")) // Kuning
-        }
+        val (statusText, statusColor) = getStatusDisplay(loan)
+        binding.tvDueDate.text = statusText
+        binding.tvDueDate.setTextColor(statusColor)
 
         // Menyambungkan tombol dengan fungsi callback yang dilempar dari Fragment
         binding.btnViewDetails.setOnClickListener {
@@ -52,4 +49,36 @@ class ActiveLoanAdapter(
     }
 
     override fun getItemCount(): Int = loanList.size
+
+    private fun getStatusDisplay(loan: Borrow): Pair<String, Int> {
+        val calendarNow = java.util.Calendar.getInstance()
+        val calendarDue = java.util.Calendar.getInstance().apply {
+            time = loan.endDate?.toDate() ?: java.util.Date()
+        }
+
+        // Reset time to midnight for day comparison
+        calendarNow.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendarNow.set(java.util.Calendar.MINUTE, 0)
+        calendarNow.set(java.util.Calendar.SECOND, 0)
+        calendarNow.set(java.util.Calendar.MILLISECOND, 0)
+
+        val midnightDue = java.util.Calendar.getInstance().apply {
+            time = calendarDue.time
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+
+        val diffMillis = midnightDue.timeInMillis - calendarNow.timeInMillis
+        val diffDays = (diffMillis / (1000 * 60 * 60 * 24)).toInt()
+
+        return when {
+            diffDays < 0 -> Pair("Overdue", android.graphics.Color.parseColor("#D32F2F"))
+            diffDays == 0 -> Pair("Due Today", android.graphics.Color.parseColor("#B38F00"))
+            diffDays == 1 -> Pair("Due Tomorrow", android.graphics.Color.parseColor("#B38F00"))
+            diffDays > 1 -> Pair("Due in $diffDays days", android.graphics.Color.parseColor("#B38F00"))
+            else -> Pair(loan.status, android.graphics.Color.parseColor("#B38F00"))
+        }
+    }
 }

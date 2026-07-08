@@ -6,16 +6,25 @@
     android:layout_height="match_parent"
     android:background="#F8F9FA">
 
-    <TextView
-        android:id="@+id/tvTransHeader"
+    <!-- Header Bar -->
+    <RelativeLayout
+        android:id="@+id/headerBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:text="Transaction History"
-        android:textColor="#212529"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="?attr/actionBarSize"
+        android:paddingHorizontal="16dp"
+        android:background="#F8F9FA"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="BorrowHub"
+            android:textColor="#0056C6"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+    </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvTransactions"
@@ -24,7 +33,7 @@
         android:clipToPadding="false"
         android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvTransHeader"
+        app:layout_constraintTop_toBottomOf="@id/headerBar"
         tools:listitem="@layout/item_transaction" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

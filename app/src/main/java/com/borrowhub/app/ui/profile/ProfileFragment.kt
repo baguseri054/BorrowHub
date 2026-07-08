@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import com.borrowhub.app.databinding.FragmentProfileBinding
 import com.borrowhub.app.ui.auth.LoginActivity
 import com.bumptech.glide.Glide
+import com.google.firebase.auth.FirebaseAuth
 
 class ProfileFragment : Fragment() {
 
@@ -60,6 +61,9 @@ class ProfileFragment : Fragment() {
         }
 
         binding.btnLogout.setOnClickListener {
+            // End the Firebase session
+            FirebaseAuth.getInstance().signOut()
+
             val intent = Intent(requireContext(), LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)

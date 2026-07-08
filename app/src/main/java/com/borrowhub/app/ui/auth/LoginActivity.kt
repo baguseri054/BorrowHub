@@ -13,39 +13,50 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
     private lateinit var auth: FirebaseAuth
 
+    /**
+     * Fungsi yang dipanggil pas activity pertama kali dibuat.
+     * 
+     * Langkah-langkahnya:
+     * 1. Setup view binding buat akses UI.
+     * 2. Inisialisasi Firebase Auth biar bisa login.
+     * 3. Cek kalo user udah login, langsung lempar ke home.
+     * 4. Pasang klik listener buat tombol login sama reset password.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Inisialisasi Firebase Auth
+        // Siapin Firebase Auth-nya
         auth = FirebaseAuth.getInstance()
 
-        // Cek jika sudah login, langsung lempar ke MainActivity
+        // Kalo emang udah login, gas langsung ke MainActivity
         if (auth.currentUser != null) {
             navigateToMain()
         }
 
-        // Eksekusi Tombol Login
+        // Kalo tombol login diklik
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
             val password = binding.etPassword.text.toString().trim()
 
+            // Pastiin email sama password nggak kosong
             if (email.isNotEmpty() && password.isNotEmpty()) {
                 loginUser(email, password)
             } else {
-                Toast.makeText(this, "Email dan password tidak boleh kosong", Toast.LENGTH_SHORT).show()
+                // Kasih tau user kalo ada yang kosong
+                Toast.makeText(this, "Hey, don't leave your email and password empty!", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Eksekusi Tombol Forgot Password
+        // Kalo tombol lupa password diklik
         binding.btnForgotPassword.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
 
-            // Validasi: Pastikan kolom email tidak kosong sebelum reset sandi
+            // Validasi: pastiin email diisi dulu sebelum minta reset
             if (email.isEmpty()) {
-                binding.etEmail.error = "Masukkan email Anda di sini terlebih dahulu"
-                binding.etEmail.requestFocus() // Mengarahkan kursor otomatis ke kolom email
+                binding.etEmail.error = "Put your email here first, buddy!"
+                binding.etEmail.requestFocus() // Fokusin kursor ke input email
                 return@setOnClickListener
             }
 
@@ -53,32 +64,58 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Fungsi buat proses login user pake Firebase.
+     * 
+     * Langkah-langkahnya:
+     * 1. Panggil fungsi Firebase buat sign in pake email & password.
+     * 2. Kalo sukses, pindah ke MainActivity.
+     * 3. Kalo gagal, tampilin pesan error-nya.
+     */
     private fun loginUser(email: String, pass: String) {
         auth.signInWithEmailAndPassword(email, pass)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     navigateToMain()
                 } else {
-                    Toast.makeText(this, "Login gagal: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                    // Kasih tau kalo login-nya gagal
+                    Toast.makeText(this, "Oops, login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
-    // Fungsi komunikasi dengan Firebase untuk mengirim email reset sandi
+    /**
+     * Fungsi buat ngirim email reset password.
+     * 
+     * Langkah-langkahnya:
+     * 1. Panggil Firebase buat kirim email reset password.
+     * 2. Kalo sukses, kasih tau user link-nya udah dikirim.
+     * 3. Kalo gagal, tampilin error-nya kenapa.
+     */
     private fun resetPassword(email: String) {
         auth.sendPasswordResetEmail(email)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    Toast.makeText(this, "Tautan pemulihan sandi telah dikirim ke $email", Toast.LENGTH_LONG).show()
+                    // Berhasil kirim email reset
+                    Toast.makeText(this, "Sent! Check your email at $email for the reset link.", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this, "Gagal mengirim email: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    // Gagal kirim email reset
+                    Toast.makeText(this, "My bad, couldn't send the email: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
+    /**
+     * Fungsi buat pindah halaman ke MainActivity.
+     * 
+     * Langkah-langkahnya:
+     * 1. Buat intent buat buka MainActivity.
+     * 2. Jalanin intent-nya.
+     * 3. Tutup activity login biar nggak bisa balik lagi kalo dipencet back.
+     */
     private fun navigateToMain() {
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
-        finish() // Menutup halaman login agar pengguna tidak bisa kembali menggunakan tombol 'Back'
+        finish() // Matiin activity ini
     }
 }

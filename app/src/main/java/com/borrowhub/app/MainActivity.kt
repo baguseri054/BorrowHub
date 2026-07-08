@@ -23,19 +23,29 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    /**
+     * Fungsi utama pas activity ini dibuat.
+     * 
+     * Langkah-langkahnya:
+     * 1. Siapin view binding buat nampilin layout.
+     * 2. Minta izin notifikasi (penting buat Android versi baru).
+     * 3. Atur jadwal reminder harian biar jalan di background.
+     * 4. Tampilin fragment Home sebagai tampilan awal.
+     * 5. Atur navigasi bawah biar bisa pindah-pindah halaman.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 1. Meminta izin notifikasi dan mengatur jadwal pengecekan latar belakang
+        // Izin notif sama jadwalin worker
         requestNotificationPermission()
         scheduleDailyReminders()
 
-        // 2. Halaman default pertama kali dibuka: Home
+        // Buka Home pas pertama kali masuk
         loadFragment(HomeFragment())
 
-        // 3. Listener klik menu navigasi bawah
+        // Atur apa yang terjadi pas menu bawah diklik
         binding.bottomNavigation.setOnItemSelectedListener { item ->
             val fragment: Fragment = when (item.itemId) {
                 R.id.nav_home -> HomeFragment()
@@ -49,14 +59,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Fungsi pembantu untuk menukar fragment di FrameLayout
+    /**
+     * Fungsi buat ganti-ganti fragment di layar.
+     * 
+     * Langkah-langkahnya:
+     * 1. Mulai transaksi fragment manager.
+     * 2. Ganti isi container fragment sama fragment yang baru.
+     * 3. Commit transaksinya biar perubahannya keliatan.
+     */
     private fun loadFragment(fragment: Fragment) {
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, fragment)
             .commit()
     }
 
-    // Fungsi untuk meminta izin memunculkan notifikasi (Wajib untuk Android 13+)
+    /**
+     * Fungsi buat minta izin notifikasi ke user.
+     * 
+     * Langkah-langkahnya:
+     * 1. Cek kalo Android-nya versi Tiramisu (13) atau lebih baru.
+     * 2. Kalo belum dapet izin POST_NOTIFICATIONS, minta izin ke user.
+     */
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -65,14 +88,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Fungsi untuk menginstruksikan Worker mengecek Firestore setiap 24 jam sekali
+    /**
+     * Fungsi buat bikin jadwal reminder harian.
+     * 
+     * Langkah-langkahnya:
+     * 1. Bikin request buat jalanin ReminderWorker tiap 24 jam.
+     * 2. Daftarin request-nya ke WorkManager biar dijadwalin sama sistem.
+     * 3. Pake policy KEEP biar jadwal yang lama nggak keganggu kalo udah ada.
+     */
     private fun scheduleDailyReminders() {
         val workRequest = PeriodicWorkRequestBuilder<ReminderWorker>(24, TimeUnit.HOURS)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "BorrowHubDailyReminder",
-            ExistingPeriodicWorkPolicy.KEEP, // KEEP = Jangan tindih jadwal yang sudah ada
+            ExistingPeriodicWorkPolicy.KEEP,
             workRequest
         )
     }

@@ -8,28 +8,24 @@
     android:orientation="vertical"
     tools:context=".ui.catalog.CatalogFragment">
 
-    <!-- Header Konsisten -->
-    <LinearLayout
+    <!-- Header Bar -->
+    <RelativeLayout
+        android:id="@+id/headerBar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="?attr/actionBarSize"
+        android:paddingHorizontal="16dp"
+        android:background="#FAFAFA">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Catalog"
-            android:textColor="#1A1A1A"
-            android:textSize="28sp"
+            android:layout_centerInParent="true"
+            android:text="BorrowHub"
+            android:textColor="#0056C6"
+            android:textSize="24sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Browse items available for borrowing."
-            android:textColor="#666666"
-            android:textSize="15sp" />
-    </LinearLayout>
+    </RelativeLayout>
 
     <!-- Content Container -->
     <FrameLayout
