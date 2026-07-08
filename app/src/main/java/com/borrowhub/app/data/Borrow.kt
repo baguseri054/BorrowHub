@@ -4,13 +4,13 @@ import com.google.firebase.Timestamp
 
 data class Borrow(
     var id: String = "",
-    val itemId: String = "",
-    val itemName: String = "",
-    val borrowerName: String = "",
-    val startDate: Timestamp? = null,
-    val endDate: Timestamp? = null,
-    val photoBefore: String = "",
-    val status: String = "Active", // Active, Completed, Overdue
-    val createdAt: Timestamp? = null,
-    val updatedAt: Timestamp? = null
+    var itemId: String = "",
+    var itemName: String = "",
+    var borrowerName: String = "",
+    var startDate: Timestamp? = null,
+    var endDate: Timestamp? = null,
+    var photoBefore: String = "",
+    var status: String = "Active", // Active, Completed, Overdue
+    var createdAt: Timestamp? = null,
+    var updatedAt: Timestamp? = null
 )

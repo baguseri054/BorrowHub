@@ -1,7 +1,6 @@
 package com.borrowhub.app.ui.catalog
 
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -9,10 +8,14 @@ import com.borrowhub.app.data.Items
 import com.borrowhub.app.databinding.ItemCatalogBinding
 import com.bumptech.glide.Glide
 
-class CatalogAdapter(private var itemList: List<Items>) :
-    RecyclerView.Adapter<CatalogAdapter.CatalogViewHolder>() {
+class CatalogAdapter(
+    private val itemList: List<Items>,
+    private val onItemClick: (Items) -> Unit,       // Callback untuk Klik Biasa (Detail)
+    private val onItemLongClick: (Items) -> Unit    // Callback untuk Klik Tahan (Hapus)
+) : RecyclerView.Adapter<CatalogAdapter.CatalogViewHolder>() {
 
-    class CatalogViewHolder(val binding: ItemCatalogBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class CatalogViewHolder(val binding: ItemCatalogBinding) :
+        RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CatalogViewHolder {
         val binding = ItemCatalogBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -21,33 +24,37 @@ class CatalogAdapter(private var itemList: List<Items>) :
 
     override fun onBindViewHolder(holder: CatalogViewHolder, position: Int) {
         val item = itemList[position]
-        holder.binding.tvItemName.text = item.name
+        val binding = holder.binding
 
-        // Set Text Status dan Warna Indikator Bulat (isAvailable)
-        val dotDrawable = holder.binding.vStatusDot.background as GradientDrawable
+        binding.tvItemName.text = item.name
+
         if (item.isAvailable) {
-            holder.binding.tvItemStatus.text = "Available"
-            holder.binding.tvItemStatus.setTextColor(Color.parseColor("#4CAF50"))
-            dotDrawable.setColor(Color.parseColor("#4CAF50"))
+            binding.tvItemStatus.text = "Available"
+            binding.tvItemStatus.setTextColor(Color.parseColor("#2E7D32")) // Warna Hijau
+            binding.vStatusDot.setCardBackgroundColor(Color.parseColor("#2E7D32"))
         } else {
-            holder.binding.tvItemStatus.text = "Borrowed"
-            holder.binding.tvItemStatus.setTextColor(Color.parseColor("#D32F2F"))
-            dotDrawable.setColor(Color.parseColor("#D32F2F"))
+            binding.tvItemStatus.text = "Borrowed"
+            binding.tvItemStatus.setTextColor(Color.parseColor("#C62828")) // Warna Merah
+            binding.vStatusDot.setCardBackgroundColor(Color.parseColor("#C62828"))
         }
 
-        // Load Gambar Menggunakan Glide
-        if (item.imageUrl.isNotEmpty()) {
-            Glide.with(holder.itemView.context)
-                .load(item.imageUrl)
-                .into(holder.binding.ivItemPhoto)
+        Glide.with(binding.ivItemPhoto.context)
+            .load(item.imageUrl)
+            .centerCrop()
+            .placeholder(android.R.drawable.ic_menu_gallery)
+            .into(binding.ivItemPhoto)
+
+        // Memicu aksi saat kartu diklik biasa
+        binding.root.setOnClickListener {
+            onItemClick(item)
+        }
+
+        // Memicu aksi saat kartu ditekan tahan
+        binding.root.setOnLongClickListener {
+            onItemLongClick(item)
+            true
         }
     }
 
     override fun getItemCount(): Int = itemList.size
-
-    // Fungsi pembantu jika ada pembaruan data secara dinamis
-    fun updateData(newItems: List<Items>) {
-        this.itemList = newItems
-        notifyDataSetChanged()
-    }
 }

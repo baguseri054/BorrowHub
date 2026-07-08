@@ -1,60 +1,91 @@
 package com.borrowhub.app.ui.transaction
 
+import android.app.AlertDialog
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.borrowhub.app.R
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.borrowhub.app.data.Borrow
+import com.borrowhub.app.databinding.FragmentTransactionsBinding
+import com.borrowhub.app.ui.home.ActiveLoanAdapter
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [TransactionsFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class TransactionsFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
-    }
+    private var _binding: FragmentTransactionsBinding? = null
+    private val binding get() = _binding!!
+
+    private val db = FirebaseFirestore.getInstance()
+    private val historyList = mutableListOf<Borrow>()
+    private lateinit var historyAdapter: ActiveLoanAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_transactions, container, false)
+    ): View {
+        _binding = FragmentTransactionsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment TransactionsFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            TransactionsFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupRecyclerView()
+        fetchTransactionHistory()
+    }
+
+    private fun setupRecyclerView() {
+        // Menggunakan ulang ActiveLoanAdapter
+        historyAdapter = ActiveLoanAdapter(
+            loanList = historyList,
+            onViewDetailsClick = { loan -> showLoanDetails(loan) },
+            onProcessReturnClick = { /* Tombol ini sudah disembunyikan untuk status Completed */ }
+        )
+
+        binding.rvTransactions.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = historyAdapter
+        }
+    }
+
+    private fun fetchTransactionHistory() {
+        // KUNCI: Hanya mengambil data yang statusnya "Completed"
+        db.collection("borrows")
+            .whereEqualTo("status", "Completed")
+            .get()
+            .addOnSuccessListener { result ->
+                historyList.clear()
+                for (document in result) {
+                    val loan = document.toObject(Borrow::class.java)
+                    loan.id = document.id
+                    historyList.add(loan)
                 }
+                historyAdapter.notifyDataSetChanged()
             }
+            .addOnFailureListener { exception ->
+                Log.e("TransactionsFragment", "Gagal memuat riwayat", exception)
+            }
+    }
+
+    private fun showLoanDetails(loan: Borrow) {
+        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val startDate = loan.startDate?.toDate()?.let { sdf.format(it) } ?: "-"
+        val endDate = loan.endDate?.toDate()?.let { sdf.format(it) } ?: "-"
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Detail Riwayat")
+            .setMessage("Barang: ${loan.itemName}\nPeminjam: ${loan.borrowerName}\nStatus: ${loan.status}\n\nTanggal Pinjam: $startDate\nTenggat Waktu: $endDate")
+            .setPositiveButton("Tutup", null)
+            .show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }
